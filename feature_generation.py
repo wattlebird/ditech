@@ -3,9 +3,10 @@ from datetime import date, timedelta
 import numpy as np
 
 startdate = date(2016, 1 ,1)
-total_datelist = [startdate+timedelta(days=i) for i in xrange(0,21)]
-train_datelist = [startdate+timedelta(days=i) for i in xrange(3,14)]
-validation_datelist = [startdate+timedelta(days=i) for i in xrange(14,21)]
+total_datelist = [startdate+timedelta(days=i) for i in xrange(3,21)]
+train_datelist = [startdate+timedelta(days=i) for i in xrange(3,15)]
+validation1_datelist = [startdate+timedelta(days=i) for i in xrange(15,20,2)]
+validation2_datelist = [startdate+timedelta(days=i) for i in xrange(16,21,2)]
 test_datelist = [startdate+timedelta(days=i) for i in xrange(21,30,2)]
 region_table = pd.read_table("season_1/training_data/cluster_map/cluster_map", index_col=0, names=['hash', 'id'])
 
@@ -152,34 +153,47 @@ def test_data_generation(filename, whole_grouped_order_table, weather_feature):
     return flst
     
 def run():
-    weather_feature = weather_feature_generation("season_1/training_data", total_datelist)
+    weather_feature = weather_feature_generation("season_1/training_data", [startdate+timedelta(days=i) for i in xrange(0,21)])
     # get region table
-    train_order = refine_order_list("season_1/training_data", train_datelist)
-    validation_order = refine_order_list("season_1/training_data", validation_datelist)
-    total_grouped_train_order = pd.concat([train_order, validation_order]).groupby(['jour', 'depart_id', 'time_slot'])
-
-    flst = training_data_generation(train_order, total_grouped_train_order, weather_feature)
-        
+    total_order = refine_order_list("season_1/training_data", total_datelist)
+    total_grouped_order = total_order.groupby(['jour', 'depart_id', 'time_slot'])
+    flst = training_data_generation(total_order, total_grouped_order, weather_feature)
+    
+    rst = total_order.jour.isin(train_datelist)
+    train_feature = [flst[i] for i in rst[rst].index]  
     with open("training_data", 'w') as fw:
-        for i, features in enumerate(flst):
-            s = '{0} {1} {2} {3} '.format(train_order.ix[i, 'order_id']-train_order.ix[i, 'driver_id'],
-            train_order.ix[i, 'jour'].day, 
-            train_order.ix[i, 'time_slot'], 
-            train_order.ix[i, 'depart_id'])
-            for idx, val in features:
+        for f, i in zip(train_feature, rst[rst].index):
+            s = '{0} {1} {2} {3} '.format(total_order.ix[i, 'order_id']-total_order.ix[i, 'driver_id'],
+            total_order.ix[i, 'jour'].day, 
+            total_order.ix[i, 'time_slot'], 
+            total_order.ix[i, 'depart_id'])
+            for idx, val in f:
                 if val!=0: s+='{0}:{1} '.format(idx, val)
             s+='\n'
             fw.write(s)
     
-    flst = training_data_generation(validation_order, total_grouped_train_order, weather_feature)
+    rst = total_order.jour.isin(validation1_datelist)
+    valid1_feature = [flst[i] for i in rst[rst].index]
+    with open("validation1_data", 'w') as fw:
+        for f, i in zip(valid1_feature, rst[rst].index):
+            s = '{0} {1} {2} {3} '.format(total_order.ix[i, 'order_id']-total_order.ix[i, 'driver_id'],
+            total_order.ix[i, 'jour'].day, 
+            total_order.ix[i, 'time_slot'], 
+            total_order.ix[i, 'depart_id'])
+            for idx, val in f:
+                if val!=0: s+='{0}:{1} '.format(idx, val)
+            s+='\n'
+            fw.write(s)
     
-    with open("validation_data", 'w') as fw:
-        for i, features in enumerate(flst):
-            s = '{0} {1} {2} {3} '.format(validation_order.ix[i, 'order_id']-validation_order.ix[i, 'driver_id'],
-            validation_order.ix[i, 'jour'].day, 
-            validation_order.ix[i, 'time_slot'], 
-            validation_order.ix[i, 'depart_id'])
-            for idx, val in features:
+    rst = total_order.jour.isin(validation2_datelist)
+    valid2_feature = [flst[i] for i in rst[rst].index]
+    with open("validation2_data", 'w') as fw:
+        for f, i in zip(valid2_feature, rst[rst].index):
+            s = '{0} {1} {2} {3} '.format(total_order.ix[i, 'order_id']-total_order.ix[i, 'driver_id'],
+            total_order.ix[i, 'jour'].day, 
+            total_order.ix[i, 'time_slot'], 
+            total_order.ix[i, 'depart_id'])
+            for idx, val in f:
                 if val!=0: s+='{0}:{1} '.format(idx, val)
             s+='\n'
             fw.write(s)
@@ -215,4 +229,4 @@ def run_test():
     
             
 if __name__=='__main__':
-    run_test()
+    run()

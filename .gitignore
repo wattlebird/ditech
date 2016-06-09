@@ -62,7 +62,8 @@ target/
 #generated features
 training_data
 training_data_total
-validation_data
+validation1_data
+validation2_data
 test_data
 result.csv
 

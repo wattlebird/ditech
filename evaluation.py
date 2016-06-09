@@ -34,7 +34,7 @@ def mape(y_true, y_pred, slot, dist):
         d -=1
         if y_true[i]!=0:
             vs[d]+=1
-            loss[s, d] = np.abs(1-y_pred[i]/y_true[i])
+            loss[s, d] += np.abs(1-y_pred[i]/y_true[i])
     l = np.sum(loss, axis=0)
     rtn=0
     for i in xrange(l.shape[0]):
