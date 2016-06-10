@@ -6,11 +6,11 @@ def run():
     weight = np.zeros(Y.shape)
     for i, y in enumerate(Y):
         if y==0:
-            weight[i]=1
+            weight[i]=0
         else:
-            weight[i]=1/y
+            weight[i]=1.0/y
 
-    lr = Ridge(alpha=10)
+    lr = Ridge(alpha=50)
     lr.fit(X, Y, weight)
     
     Xt, recs = gettestdata("test_data", "season_1/test_set_1/read_me_1.txt")
@@ -19,7 +19,7 @@ def run():
     
     with open("result.csv", "w") as fw:
         for i, (r, s) in enumerate(recs):
-            fw.write("{0},{1},{2}\n".format(r, s, Yt[i]))
+            fw.write("{0},{1},{2}\n".format(r, s, Yt_pred[i]))
             
 if __name__=='__main__':
     run()

@@ -163,6 +163,8 @@ def run():
     train_feature = [flst[i] for i in rst[rst].index]  
     with open("training_data", 'w') as fw:
         for f, i in zip(train_feature, rst[rst].index):
+            if total_order.ix[i, 'order_id']-total_order.ix[i, 'driver_id']==0:
+                continue;
             s = '{0} {1} {2} {3} '.format(total_order.ix[i, 'order_id']-total_order.ix[i, 'driver_id'],
             total_order.ix[i, 'jour'].day, 
             total_order.ix[i, 'time_slot'], 
