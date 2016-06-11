@@ -2,7 +2,7 @@ import numpy as np
 from sklearn.linear_model import Ridge
 from scipy.sparse import coo_matrix
 
-offset=np.array([170, 236, 296, 359])#, 335, 339])
+offset=np.array([170, 236, 278])#, 359])#, 335, 339])
 ext = [offset[-1]]
 for i in xrange(len(offset)-1):
     if i==0:
@@ -43,7 +43,7 @@ def mape(y_true, y_pred, slot, dist):
             rtn+=l[i]/vs[i]
     return rtn/dct
     
-def getdata(filename):
+def getdata(filename, extent2d=True):
     y_true = []
     col = []
     data = []
@@ -73,7 +73,8 @@ def getdata(filename):
             data.append(vdata)
             
     for i, (c, d) in enumerate(zip(col, data)):
-        c, d = extend_2dfeature(c, d)
+        if extent2d:
+            c, d = extend_2dfeature(c, d)
         col[i]=c
         data[i]=d
         
@@ -81,13 +82,17 @@ def getdata(filename):
     for i in xrange(len(col)):
         row.append([i]*len(col[i]))
         
-    X = coo_matrix((np.hstack(data), (np.hstack(row), np.hstack(col))), shape=(len(y_true), ext[-1]))
-    X = X.tocsr()
+    if extent2d:
+        X = coo_matrix((np.hstack(data), (np.hstack(row), np.hstack(col))), shape=(len(y_true), ext[-1]))
+        X = X.tocsr()
+    else:
+        X = coo_matrix((np.hstack(data), (np.hstack(row), np.hstack(col))), shape=(len(y_true), ext[0]))
+        X = X.todense()
     Y = np.asarray(y_true)
     
     return (X, Y, slot, dist)
 
-def gettestdata(testdata, testdescription):
+def gettestdata(testdata, testdescription, extent2d=True):
     record = []
     with open(testdescription, 'r') as fr:
         while True:
@@ -116,7 +121,8 @@ def gettestdata(testdata, testdescription):
             data.append(vdata)
             
     for i, (c, d) in enumerate(zip(col, data)):
-        c, d = extend_2dfeature(c, d)
+        if extent2d:
+            c, d = extend_2dfeature(c, d)
         col[i]=c
         data[i]=d
         
@@ -124,7 +130,11 @@ def gettestdata(testdata, testdescription):
     for i in xrange(len(col)):
         row.append([i]*len(col[i]))
         
-    X = coo_matrix((np.hstack(data), (np.hstack(row), np.hstack(col))), shape=(len(record), ext[-1]))
-    X = X.tocsr()
+    if extent2d:
+        X = coo_matrix((np.hstack(data), (np.hstack(row), np.hstack(col))), shape=(len(y_true), ext[-1]))
+        X = X.tocsr()
+    else:
+        X = coo_matrix((np.hstack(data), (np.hstack(row), np.hstack(col))), shape=(len(y_true), ext[0]))
+        X = X.todense()
     
     return (X, record)
