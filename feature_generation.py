@@ -24,6 +24,26 @@ def gap_level(a):
     elif a<=5: return 2;
     elif a<=20: return 3;
     else: return 4;
+    
+def dgap_level(a):
+    if a<-10: return 0;
+    elif a<-5: return 1;
+    elif a<-3: return 2;
+    elif a<=-1: return 3;
+    elif a==0: return 4;
+    elif a<3: return 5;
+    elif a<5: return 6;
+    elif a<10: return 7;
+    else: return 8;
+    
+def ddemand_level(a):
+    if a<-20: return 0;
+    elif a<-5: return 1;
+    elif a<=-1: return 2;
+    elif a==0: return 3;
+    elif a<5: return 4;
+    elif a<20: return 5;
+    else: return 6;
 
 def weather_feature_generation(path, datelist):
     """generated weather feature is a numpy 2d array of length 144 x len(datelist).
@@ -73,6 +93,57 @@ def weather_feature_generation(path, datelist):
             b=e
     return weather_feature
     
+def traffic_generation(path, datelist):
+    vtraffic = []
+    for d in datelist:
+        traffic_table = pd.read_table(path+"/traffic_data/traffic_data_"+d.isoformat(), names=['district', 
+                'one', 'two', 'three', 'four', 'time'], parse_dates=[5])
+        traffic = traffic_table[['one', 'two', 'three', 'four']].applymap(lambda x: int(x.split(':')[1]))
+        traffic = traffic.div(traffic.sum(axis=1), axis=0)
+        traffic['slot'] = traffic_table.time.apply(lambda x: x.hour*6+x.minute/10)
+        traffic['date'] = traffic_table.time.apply(lambda x: x.day)
+        traffic['district'] = traffic_table.district.apply(lambda x: region_table.ix[x, 0])
+        vtraffic.append(traffic)
+    grouped_traffic = pd.concat(vtraffic).groupby(['date','district','slot'])
+    return grouped_traffic
+    
+def training_first_order(order_table):
+    grouped_order = order_table.groupby('depart_id')
+    delta = []
+    for destrict in xrange(1, 67):
+        destrict_order = grouped_order.get_group(destrict).copy()
+        gap = destrict_order['order_id']-destrict_order['driver_id']
+        dgap = np.zeros(gap.shape)
+        for i in xrange(1, dgap.shape[0]):
+            dgap[i] = gap.iloc[i]-gap.iloc[i-1]
+        ddemand = np.zeros(destrict_order['order_id'].shape)
+        for i in xrange(1, ddemand.shape[0]):
+            ddemand[i] = destrict_order['order_id'].iloc[i] - destrict_order['order_id'].iloc[i-1]
+        destrict_order['dgap']=dgap
+        destrict_order['ddemand']=ddemand
+        delta.append(destrict_order)
+    dor = pd.concat(delta)
+    return dor
+    
+def test_first_order(order_table, datelist):
+    grouped_order = order_table.groupby(['jour', 'depart_id'])
+    delta = []
+    for dt in datelist:
+        for destrict in xrange(1, 67):
+            destrict_order = grouped_order.get_group((dt, destrict)).copy()
+            gap = destrict_order['order_id']-destrict_order['driver_id']
+            dgap = np.zeros(gap.shape)
+            for i in xrange(1, dgap.shape[0]):
+                dgap[i] = gap.iloc[i]-gap.iloc[i-1]
+            ddemand = np.zeros(destrict_order['order_id'].shape)
+            for i in xrange(1, ddemand.shape[0]):
+                ddemand[i] = destrict_order['order_id'].iloc[i] - destrict_order['order_id'].iloc[i-1]
+            destrict_order['dgap']=dgap
+            destrict_order['ddemand']=ddemand
+            delta.append(destrict_order)
+    dor = pd.concat(delta)
+    return dor
+
 # read order records
 def refine_order_list(path, datelist):
     order_table_list = []
@@ -93,7 +164,7 @@ def refine_order_list(path, datelist):
     f = order_table.groupby(by=['jour', 'depart_id', 'time_slot'], as_index=False).count()
     return f
     
-def training_data_generation(order_table, whole_grouped_order_table, weather_feature):
+def training_data_generation(order_table, whole_grouped_order_table, weather_feature, grouped_traffic):
     # flst is the final feature
     flst = []
     # generate time feature
@@ -113,15 +184,55 @@ def training_data_generation(order_table, whole_grouped_order_table, weather_fea
             demand = rec.iloc[0, 3]
             flst[i].append((236+6*gap_level(gp)+customer_level(demand), 1))
         except KeyError:
-            continue;
+            pass;
+            
+        if order_table.ix[i, 'time_slot']==0:
+            pd = order_table.ix[i, 'jour'] - timedelta(days=1)
+            pt = 143
+        else:
+            pd = order_table.ix[i, 'jour']
+            pt = order_table.ix[i, 'time_slot']-1
+        try:
+            rec = whole_grouped_order_table.get_group((pd, order_table.ix[i, 'depart_id'], pt))
+            gp = rec.iloc[0, 3]-rec.iloc[0, 4]
+            demand = rec.iloc[0, 3]
+            flst[i].append((266+6*gap_level(gp)+customer_level(demand), 1))
+        except KeyError:
+            pass;
+            
+        # generation of first_order_feature
+        if order_table.ix[i, 'time_slot']==0:
+            pd = order_table.ix[i, 'jour'] - timedelta(days=1)
+            pt = 143
+        else:
+            pd = order_table.ix[i, 'jour']
+            pt = order_table.ix[i, 'time_slot']-1
+        try:
+            rec = whole_grouped_order_table.get_group((pd, order_table.ix[i, 'depart_id'], pt))
+            flst[i].append((296+7*dgap_level(rec.iloc[0, 5])+ddemand_level(rec.iloc[0, 6]), 1))
+        except KeyError:
+            pass;
+            
     # weather feature
-    for i in xrange(order_table.shape[0]):
-        wf = weather_feature[order_table.ix[i, 'time_slot']+144*(order_table.ix[i, 'jour'].day-1), :]
-        for idx in np.nonzero(wf)[0]:
-            flst[i].append((266+idx, wf[idx]))
+    #for i in xrange(order_table.shape[0]):
+    #    wf = weather_feature[order_table.ix[i, 'time_slot']+144*(order_table.ix[i, 'jour'].day-1), :]
+    #    for idx in np.nonzero(wf)[0]:
+    #        flst[i].append((326+idx, wf[idx]))
+    # traffic feature
+    #for i in xrange(order_table.shape[0]):
+    #    try:
+    #        rec = grouped_traffic.get_group((order_table.ix[i, 'jour'].day, 
+    #        order_table.ix[i, 'depart_id'], 
+    #        order_table.ix[i, 'time_slot']))
+    #        flst[i].append((335, rec.iloc[0, 0]/5))
+    #        flst[i].append((336, rec.iloc[0, 1]))
+    #        flst[i].append((337, rec.iloc[0, 2]*5))
+    #        flst[i].append((338, rec.iloc[0, 3]*5))
+    #    except KeyError:
+    #        pass;
     return flst
     
-def test_data_generation(filename, whole_grouped_order_table, weather_feature):
+def test_data_generation(filename, whole_grouped_order_table, test_grouped_order_table, weather_feature, test_grouped_traffic):
     flst = []
     dd = timedelta(days=7)
     with open(filename, 'r') as fr:
@@ -145,26 +256,62 @@ def test_data_generation(filename, whole_grouped_order_table, weather_feature):
                 except KeyError:
                     pass;
                     
-                wf = weather_feature[r[3]-1+144*((r[2]-22)/2), :]
-                for idx in np.nonzero(wf)[0]:
-                    xc.append((266+idx, wf[idx]))
+                if r[3]==1:
+                    pd = date(r[0], r[1], r[2]) - timedelta(days=1)
+                    pt = 143
+                else:
+                    pd = date(r[0], r[1], r[2])
+                    pt = r[3]-2
+                try:
+                    rec = test_grouped_order_table.get_group((pd, t+1, pt))
+                    gp = rec.iloc[0, 3]-rec.iloc[0, 4]
+                    demand = rec.iloc[0, 3]
+                    xc.append((266+6*gap_level(gp)+customer_level(demand), 1))
+                except KeyError:
+                    pass;
+                    
+                    
+                if r[3]==1:
+                    pd = date(r[0], r[1], r[2]) - timedelta(days=1)
+                    pt = 143
+                else:
+                    pd = date(r[0], r[1], r[2])
+                    pt = r[3]-2
+                try:
+                    rec = test_grouped_order_table.get_group((pd, t+1, pt))
+                    xc.append((296+7*dgap_level(rec.iloc[0, 5])+ddemand_level(rec.iloc[0, 6]), 1))
+                except KeyError:
+                    pass;
+                    
+                #wf = weather_feature[r[3]-1+144*((r[2]-22)/2), :]
+                #for idx in np.nonzero(wf)[0]:
+                #    xc.append((326+idx, wf[idx]))
+                #    
+                #try:
+                #    rec = grouped_traffic.get_group((r[2], r[3], t+1))
+                #    xc.append((335, rec.iloc[0, 0]/5))
+                #    xc.append((336, rec.iloc[0, 1]))
+                #    xc.append((337, rec.iloc[0, 2]*5))
+                #    xc.append((338, rec.iloc[0, 3]*5))
+                #except KeyError:
+                #    pass;
                     
                 flst.append(xc)
     return flst
     
 def run():
-    weather_feature = weather_feature_generation("season_1/training_data", [startdate+timedelta(days=i) for i in xrange(0,21)])
+    #weather_feature = weather_feature_generation("season_1/training_data", [startdate+timedelta(days=i) for i in xrange(0,21)])
     # get region table
     total_order = refine_order_list("season_1/training_data", total_datelist)
+    total_order = training_first_order(total_order)
     total_grouped_order = total_order.groupby(['jour', 'depart_id', 'time_slot'])
-    flst = training_data_generation(total_order, total_grouped_order, weather_feature)
+    #grouped_traffic = traffic_generation("season_1/training_data", total_datelist)
+    flst = training_data_generation(total_order, total_grouped_order, None, None)
     
     rst = total_order.jour.isin(train_datelist)
     train_feature = [flst[i] for i in rst[rst].index]  
     with open("training_data", 'w') as fw:
         for f, i in zip(train_feature, rst[rst].index):
-            if total_order.ix[i, 'order_id']-total_order.ix[i, 'driver_id']==0:
-                continue;
             s = '{0} {1} {2} {3} '.format(total_order.ix[i, 'order_id']-total_order.ix[i, 'driver_id'],
             total_order.ix[i, 'jour'].day, 
             total_order.ix[i, 'time_slot'], 
@@ -201,11 +348,14 @@ def run():
             fw.write(s)
             
 def run_test():
-    weather_feature = weather_feature_generation("season_1/training_data", total_datelist)
+    #weather_feature = weather_feature_generation("season_1/training_data", [startdate+timedelta(days=i) for i in xrange(0,21)])
     # get region table
-    train_order = refine_order_list("season_1/training_data", train_datelist+validation_datelist)
+    train_order = refine_order_list("season_1/training_data", total_datelist)
+    train_order = training_first_order(train_order)
     total_grouped_train_order = train_order.groupby(['jour', 'depart_id', 'time_slot'])
-    flst = training_data_generation(train_order, total_grouped_train_order, weather_feature)
+    
+    #grouped_traffic = traffic_generation("season_1/training_data", total_datelist)
+    flst = training_data_generation(train_order, total_grouped_train_order, None, None)
         
     with open("training_data_total", 'w') as fw:
         for i, features in enumerate(flst):
@@ -218,8 +368,12 @@ def run_test():
             s+='\n'
             fw.write(s)
 
-    weather_feature = weather_feature_generation("season_1/test_set_1/", test_datelist)
-    flst = test_data_generation("season_1/test_set_1/read_me_1.txt", total_grouped_train_order, weather_feature)
+    test_order = refine_order_list("season_1/test_set_1", test_datelist)
+    test_order = test_first_order(test_order, test_datelist)
+    grouped_test_order = test_order.groupby(['jour', 'depart_id', 'time_slot'])
+    #weather_feature = weather_feature_generation("season_1/test_set_1/", test_datelist)
+    #grouped_test_traffic = traffic_generation("season_1/test_set_1", test_datelist)
+    flst = test_data_generation("season_1/test_set_1/read_me_1.txt", total_grouped_train_order, grouped_test_order, None, None)
     
     with open("test_data", 'w') as fw:
         for features in flst:
@@ -231,4 +385,4 @@ def run_test():
     
             
 if __name__=='__main__':
-    run()
+    run_test()
