@@ -20,7 +20,7 @@ def gap_level(a):
     else: return 6;
     
 def customer_level(a):
-    if a<=4: return 0;
+    if a<=10: return 0;
     elif a<=20: return 1;
     else: return 2;
     
