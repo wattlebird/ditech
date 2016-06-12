@@ -2,7 +2,7 @@ import numpy as np
 from sklearn.linear_model import Ridge
 from scipy.sparse import coo_matrix
 
-offset=np.array([26, 92, 183])#, 359])#, 335, 339])
+offset=np.array([26, 92, 204])#, 359])#, 335, 339])
 ext = [offset[-1]]
 for i in xrange(len(offset)-1):
     if i==0:

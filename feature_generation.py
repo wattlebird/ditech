@@ -4,9 +4,8 @@ import numpy as np
 
 startdate = date(2016, 1 ,1)
 total_datelist = [startdate+timedelta(days=i) for i in xrange(3,21)]
-train_datelist = [startdate+timedelta(days=i) for i in xrange(3,15)]
-validation1_datelist = [startdate+timedelta(days=i) for i in xrange(15,20,2)]
-validation2_datelist = [startdate+timedelta(days=i) for i in xrange(16,21,2)]
+train_datelist = [startdate+timedelta(days=i-1) for i in [5,6,7,8,10,11,12,13,14,15,16,18,20]]
+validation_datelist = [startdate+timedelta(days=i-1) for i in [4,9,17,19,21]]
 test_datelist = [startdate+timedelta(days=i) for i in xrange(22,31,2)]
 region_table = pd.read_table("season_1/training_data/cluster_map/cluster_map", index_col=0, names=['hash', 'id'])
 
@@ -198,10 +197,12 @@ def training_data_generation(order_table, whole_grouped_order_table, weather_fea
         try:
             rec2 = whole_grouped_order_table.get_group((p2d, order_table.ix[i, 'depart_id'], p2t))
             gp2 = rec2.iloc[0, 3]-rec2.iloc[0, 4]
-            flst[i].append((134+7*gap_level(gp)+gap_level(gp2), 1))
+            demand = rec2.iloc[0, 3]
+            flst[i].append((134+3*gap_level(gp2)+customer_level(demand), 1))
+            flst[i].append((155+7*gap_level(gp)+gap_level(gp2), 1))
         except KeyError:
             pass;
-           
+        
     # weather feature
     #for i in xrange(order_table.shape[0]):
     #    wf = weather_feature[order_table.ix[i, 'time_slot']+144*(order_table.ix[i, 'jour'].day-1), :]
@@ -233,6 +234,21 @@ def test_data_generation(filename, whole_grouped_order_table, test_grouped_order
             #x = [(r[3]-1, 1), (144+(r[3]-1)/6, 1), (168+date(r[0], r[1], r[2]).weekday()/5, 1)]
             x = [((r[3]-1)/6, 1), (24+date(r[0], r[1], r[2]).weekday()/5, 1)]
             
+            if r[3]==1:
+                pd = date(r[0], r[1], r[2]) - timedelta(days=1)
+                pt = 143
+            else:
+                pd = date(r[0], r[1], r[2])
+                pt = r[3]-2
+            
+            if r[3]==2:
+                p2d = date(r[0], r[1], r[2]) - timedelta(days=1)
+                p2t = 143
+            else:
+                p2d = date(r[0], r[1], r[2])
+                p2t = r[3]-3
+                
+            
             for t in xrange(66):
                 xc = x[:]
                 xc.append((26+t, 1))
@@ -246,12 +262,6 @@ def test_data_generation(filename, whole_grouped_order_table, test_grouped_order
                 except KeyError:
                     pass;
                     
-                if r[3]==1:
-                    pd = date(r[0], r[1], r[2]) - timedelta(days=1)
-                    pt = 143
-                else:
-                    pd = date(r[0], r[1], r[2])
-                    pt = r[3]-2
                 try:
                     rec = test_grouped_order_table.get_group((pd, t+1, pt))
                     gp = rec.iloc[0, 3]-rec.iloc[0, 4]
@@ -259,17 +269,13 @@ def test_data_generation(filename, whole_grouped_order_table, test_grouped_order
                     xc.append((113+3*gap_level(gp)+customer_level(demand), 1))
                 except KeyError:
                     pass;
-                    
-                if r[3]==2:
-                    p2d = date(r[0], r[1], r[2]) - timedelta(days=1)
-                    p2t = 143
-                else:
-                    p2d = date(r[0], r[1], r[2])
-                    p2t = r[3]-3
+
                 try:
                     rec2 = test_grouped_order_table.get_group((p2d, t+1, p2t))
                     gp2 = rec2.iloc[0, 3]-rec2.iloc[0, 4]
-                    xc.append((134+7*gap_level(gp)+gap_level(gp2), 1))
+                    demand = rec2.iloc[0, 3]
+                    xc.append((134+3*gap_level(gp2)+customer_level(demand), 1))
+                    xc.append((155+7*gap_level(gp)+gap_level(gp2), 1))
                 except KeyError:
                     pass;
 
@@ -310,11 +316,13 @@ def run():
                 if val!=0: s+='{0}:{1} '.format(idx, val)
             s+='\n'
             fw.write(s)
+            if total_order.ix[i, 'jour'].day==10 or total_order.ix[i, 'jour'].day==16:
+                fw.write(s)
     
-    rst = total_order.jour.isin(validation1_datelist)
-    valid1_feature = [flst[i] for i in rst[rst].index]
+    rst = total_order.jour.isin(validation_datelist)
+    valid_feature = [flst[i] for i in rst[rst].index]
     with open("validation1_data", 'w') as fw:
-        for f, i in zip(valid1_feature, rst[rst].index):
+        for f, i in zip(valid_feature, rst[rst].index):
             if total_order.ix[i, 'order_id']==total_order.ix[i, 'driver_id']: continue;
             s = '{0} {1} {2} {3} '.format(total_order.ix[i, 'order_id']-total_order.ix[i, 'driver_id'],
             total_order.ix[i, 'jour'].day, 
@@ -325,19 +333,6 @@ def run():
             s+='\n'
             fw.write(s)
     
-    rst = total_order.jour.isin(validation2_datelist)
-    valid2_feature = [flst[i] for i in rst[rst].index]
-    with open("validation2_data", 'w') as fw:
-        for f, i in zip(valid2_feature, rst[rst].index):
-            if total_order.ix[i, 'order_id']==total_order.ix[i, 'driver_id']: continue;
-            s = '{0} {1} {2} {3} '.format(total_order.ix[i, 'order_id']-total_order.ix[i, 'driver_id'],
-            total_order.ix[i, 'jour'].day, 
-            total_order.ix[i, 'time_slot'], 
-            total_order.ix[i, 'depart_id'])
-            for idx, val in f:
-                if val!=0: s+='{0}:{1} '.format(idx, val)
-            s+='\n'
-            fw.write(s)
             
 def run_test():
     #weather_feature = weather_feature_generation("season_1/training_data", [startdate+timedelta(days=i) for i in xrange(0,21)])
@@ -359,6 +354,8 @@ def run_test():
                 if val!=0: s+='{0}:{1} '.format(idx, val)
             s+='\n'
             fw.write(s)
+            if train_order.ix[i, 'jour'].day==10 or train_order.ix[i, 'jour'].day==16:
+                fw.write(s)
 
     test_order = refine_order_list("season_1/test_set_2", test_datelist)
     grouped_test_order = test_order.groupby(['jour', 'depart_id', 'time_slot'])
@@ -376,4 +373,4 @@ def run_test():
     
             
 if __name__=='__main__':
-    run()
+    run_test()
