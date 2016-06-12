@@ -1,6 +1,6 @@
 from evaluation import *
 from sklearn.linear_model import Ridge
-from sklearn.ensemble import RandomForestRegressor
+#from sklearn.ensemble import RandomForestRegressor
 
 def run():
     X, Y, slot, dist = getdata("training_data_total")
@@ -11,13 +11,13 @@ def run():
         else:
             weight[i]=1.0/y
 
-    #lr = Ridge(alpha=60)
-    #lr.fit(X, Y, weight)
-    rf = RandomForestRegressor(n_estimators=50, min_samples_leaf=20, n_jobs=-1)
-    rf.fit(X, Y, weight)
+    lr = Ridge(alpha=30)
+    lr.fit(X, Y, weight)
+    #rf = RandomForestRegressor(n_estimators=50, min_samples_leaf=20, n_jobs=-1)
+    #rf.fit(X, Y, weight)
     
-    Xt, recs = gettestdata("test_data", "season_1/test_set_1/read_me_1.txt")
-    Yt_pred = rf.predict(Xt)
+    Xt, recs = gettestdata("test_data", "season_1/test_set_2/read_me_2.txt")
+    Yt_pred = lr.predict(Xt)
     Yt_pred[Yt_pred<0]=0
     
     with open("result.csv", "w") as fw:
