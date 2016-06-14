@@ -197,9 +197,7 @@ def training_data_generation(order_table, whole_grouped_order_table, weather_fea
         try:
             rec2 = whole_grouped_order_table.get_group((p2d, order_table.ix[i, 'depart_id'], p2t))
             gp2 = rec2.iloc[0, 3]-rec2.iloc[0, 4]
-            demand = rec2.iloc[0, 3]
-            flst[i].append((134+3*gap_level(gp2)+customer_level(demand), 1))
-            flst[i].append((155+7*gap_level(gp)+gap_level(gp2), 1))
+            flst[i].append((134+7*gap_level(gp)+gap_level(gp2), 1))
         except KeyError:
             pass;
         
@@ -273,9 +271,7 @@ def test_data_generation(filename, whole_grouped_order_table, test_grouped_order
                 try:
                     rec2 = test_grouped_order_table.get_group((p2d, t+1, p2t))
                     gp2 = rec2.iloc[0, 3]-rec2.iloc[0, 4]
-                    demand = rec2.iloc[0, 3]
-                    xc.append((134+3*gap_level(gp2)+customer_level(demand), 1))
-                    xc.append((155+7*gap_level(gp)+gap_level(gp2), 1))
+                    xc.append((134+7*gap_level(gp)+gap_level(gp2), 1))
                 except KeyError:
                     pass;
 

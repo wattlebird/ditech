@@ -11,7 +11,7 @@ def run():
         else:
             weight[i]=1.0/y
 
-    lr = Ridge(alpha=40)
+    lr = Ridge(alpha=10)
     lr.fit(X, Y, weight)
     #rf = RandomForestRegressor(n_estimators=50, min_samples_leaf=20, n_jobs=-1)
     #rf.fit(X, Y, weight)

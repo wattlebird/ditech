@@ -2,7 +2,7 @@ import numpy as np
 from sklearn.linear_model import Ridge
 from scipy.sparse import coo_matrix
 
-offset=np.array([26, 92, 204])#, 359])#, 335, 339])
+offset=np.array([24, 26, 92, 113, 134, 183])#, 359])#, 335, 339])
 ext = [offset[-1]]
 for i in xrange(len(offset)-1):
     if i==0:
@@ -87,7 +87,6 @@ def getdata(filename, extent2d=True):
         X = X.tocsr()
     else:
         X = coo_matrix((np.hstack(data), (np.hstack(row), np.hstack(col))), shape=(len(y_true), ext[0]))
-        X = X.todense()
     Y = np.asarray(y_true)
     
     return (X, Y, slot, dist)
@@ -135,6 +134,5 @@ def gettestdata(testdata, testdescription, extent2d=True):
         X = X.tocsr()
     else:
         X = coo_matrix((np.hstack(data), (np.hstack(row), np.hstack(col))), shape=(len(record), ext[0]))
-        X = X.todense()
     
     return (X, record)
