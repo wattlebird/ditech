@@ -163,10 +163,10 @@ def training_data_generation(demand, gap, datelist):
             districts[i*144*66+t*66:i*144*66+t*66+66] = np.arange(1, 67)
             
             #generate spatial feature first
-            #sf = []
-            #if offset>=66:
-            #    for r in xrange(66):
-            #        sf.append((183+r*7+gap_level(gap[offset-66+r]), 1))
+            sf = []
+            if offset>=66:
+                for r in xrange(66):
+                    sf.append((183+r, np.sqrt(gap[offset-66+r])))
             
             for r in xrange(66):
                 y[i*144*66+t*66+r] = gap[offset+r]
@@ -196,9 +196,9 @@ def test_data_generation(filename, tdemand, tgap, demand, gap):
             r = [int(itm) for itm in r.split('-')]
             weekd = date(r[0], r[1], r[2]).weekday()/5
             offset = (r[2]-23)/2*144*66 + (r[3]-1)*66
-            #sf = []
-            #for d in xrange(66):
-            #    sf.append((183+d*7+gap_level(gap[offset-66+d]), 1))
+            sf = []
+            for d in xrange(66):
+                sf.append((183+d, np.sqrt(gap[offset-66+d])))
                 
             for d in xrange(66):
                 flst.append([(r[3]/6, 1), (24+weekd, 1), (26+d, 1)])
@@ -282,4 +282,4 @@ def run_test():
     
             
 if __name__=='__main__':
-    run_test()
+    run()

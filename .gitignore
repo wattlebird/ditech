@@ -65,6 +65,7 @@ training_data_total
 validation_data
 test_data
 result.csv
+lr_*
 
 #competition data
 season_1

@@ -3,8 +3,8 @@ import xgboost as xgb
 
 
 def run():
-    X, Y, slot, dist = getdata("training_data_total")
-    Xt, recs = gettestdata("test_data", "season_1/test_set_2/read_me_2.txt")
+    X, Y, slot, dist = getdata("training_data_total", "lr_train_total")
+    Xt, recs = gettestdata("test_data", "season_1/test_set_2/read_me_2.txt", "lr_test_rst")
     weight = np.zeros(Y.shape)
     for i, y in enumerate(Y):
         if y==0:
@@ -14,7 +14,7 @@ def run():
     dtrain = xgb.DMatrix(X, label=Y, weight=weight)
     dtest = xgb.DMatrix(Xt)
 
-    gbdr = xgb.train({"max_depth":50,"objective":"reg:linear", "eval_metric":"mae", "min_child_weight":16, "alpha":5}, dtrain, num_boost_round=3)
+    gbdr = xgb.train({"max_depth":50,"objective":"reg:linear", "eval_metric":"mae", "min_child_weight":1, "gamma":12, "alpha":5}, dtrain, num_boost_round=3)
     #lr = xgb.train({"booster":"gblinear", 'lambda':5,'alpha':5}, dtrain)
     
     Yt_pred = gbdr.predict(dtest)
