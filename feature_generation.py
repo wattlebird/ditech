@@ -23,6 +23,11 @@ def customer_level(a):
     if a<=10: return 0;
     elif a<=20: return 1;
     else: return 2;
+    
+def std_level(a):
+    if a<=1: return 0;
+    elif a<=5: return 1;
+    else: return 2;
 
 def weather_feature_generation(path, datelist):
     """generated weather feature is a numpy 2d array of length 144 x len(datelist).
@@ -182,6 +187,14 @@ def training_data_generation(demand, gap, datelist):
                     flst[i*144*66+t*66+r].append((134+7*gap_level(gap[offset-132+r])+
                                                 gap_level(gap[offset-66+r]), 1))
                                                 
+                if offset>=66:
+                    flst[i*144*66+t*66+r].append((183+gap_level(gap[offset-66+r]), 1))
+                if offset>=132:
+                    flst[i*144*66+t*66+r].append((183+gap_level((gap[offset-66+r]+gap[offset-132+r])/2), 1))
+                    flst[i*144*66+t*66+r].append((190+std_level(np.std([gap[offset-66+r],gap[offset-132+r]])), 1))
+                if offset>=198:
+                    flst[i*144*66+t*66+r].append((183+gap_level((gap[offset-66+r]+gap[offset-132+r]+gap[offset-198+r])/3), 1))
+                    flst[i*144*66+t*66+r].append((190+std_level(np.std([gap[offset-66+r],gap[offset-132+r],gap[offset-198+r]])), 1))
                                                 
                 #flst[i*144*66+t*66+r].extend(sf)
     return flst, y, days, slots, districts
@@ -208,6 +221,8 @@ def test_data_generation(filename, tdemand, tgap, demand, gap):
                 flst[-1].append((113+3*gap_level(gap[offset+d-66])+customer_level(demand[offset+d-66]), 1))
                 flst[-1].append((134+7*gap_level(gap[offset+d-66-66])+gap_level(gap[offset+d-66]), 1))
                 #flst[-1].extend(sf)
+                flst[-1].append((183+gap_level((gap[offset-66+d]+gap[offset-132+d]+gap[offset-198+d])/3), 1))
+                flst[-1].append((190+std_level(np.std([gap[offset-66+d],gap[offset-132+d],gap[offset-198+d]])), 1))
                 
     return flst
 
@@ -282,4 +297,4 @@ def run_test():
     
             
 if __name__=='__main__':
-    run()
+    run_test()

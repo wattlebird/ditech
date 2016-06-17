@@ -14,7 +14,7 @@ def run():
     dtrain = xgb.DMatrix(X, label=Y, weight=weight)
     dtest = xgb.DMatrix(Xt)
 
-    gbdr = xgb.train({"max_depth":5,"objective":"reg:linear", "eval_metric":"mae", "min_child_weight":5, "gamma":10, "alpha":5, 'subsample':0.8}, dtrain, num_boost_round=3)
+    gbdr = xgb.train({"max_depth":6,"objective":"reg:linear", "eval_metric":"mae", "min_child_weight":3, 'alpha':5, 'lambda':1,'gamma':0, 'subsample':0.85}, dtrain, num_boost_round=3)
     #lr = xgb.train({"booster":"gblinear", 'lambda':5,'alpha':5}, dtrain)
     
     Yt_pred = gbdr.predict(dtest)
