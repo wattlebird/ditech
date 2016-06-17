@@ -3,14 +3,14 @@ from sklearn.linear_model import Ridge
 from scipy.sparse import coo_matrix
 from feature_generation import gap_level
 
-sz=np.array([24, 2, 66, 21, 21, 49, 7])
+sz=np.array([24, 2, 66, 21, 21, 49, 1])
 combpattern = np.array([
     [0,1,1,1,1,1,1],
     [0,0,1,1,1,1,1],
     [0,0,0,1,1,1,1],
     [0,0,0,0,1,0,1],
-    [0,0,0,0,0,0,1],
-    [0,0,0,0,0,0,1],
+    [0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0],
     [0,0,0,0,0,0,0]
 ])
 
@@ -88,8 +88,9 @@ def getdata(filename, lrresult, extent2d=True):
                 idx, val = itm.split(':')
                 vidx.append(int(idx))
                 vdata.append(float(val))
-            vidx.append(offset[-2]+gap_level(lrpred))
-            vdata.append(1)
+            #vidx.append(offset[-2]+gap_level(lrpred))
+            vidx.append(offset[-2])
+            vdata.append(lrpred)
             col.append(vidx)
             data.append(vdata)
             
@@ -137,8 +138,9 @@ def gettestdata(testdata, testdescription, lrresult, extent2d=True):
                 idx, val = x.split(":")
                 vidx.append(int(idx))
                 vdata.append(float(val))
-            vidx.append(offset[-2]+gap_level(lrpred))
-            vdata.append(1)
+            #vidx.append(offset[-2]+gap_level(lrpred))
+            vidx.append(offset[-2])
+            vdata.append(lrpred)
             col.append(vidx)
             data.append(vdata)
             
