@@ -28,6 +28,8 @@ for i in xrange(ext.shape[0]):
         if combpattern[i, j]!=0:
             ext[i, j]=l
             l += sz[i]*sz[j]
+            
+sel = np.array([45,57,69,81,93,105,117,129,141])
         
 def extend_2dfeature(row, data):
     exrow = row[:]
@@ -47,6 +49,23 @@ def extend_2dfeature(row, data):
     return (exrow, exdata)
         
 def mape(y_true, y_pred, slot, dist):
+    vs = np.zeros(66)
+    dct = 0
+    loss = np.zeros((144, 66))
+    for i, (s, d) in enumerate(zip(slot, dist)):
+        d -=1
+        if y_true[i]!=0:
+            vs[d]+=1
+            loss[s, d] += np.abs(1-y_pred[i]/y_true[i])
+    l = np.sum(loss, axis=0)
+    rtn=0
+    for i in xrange(l.shape[0]):
+        if vs[i]!=0:
+            dct+=1
+            rtn+=l[i]/vs[i]
+    return rtn/dct
+    
+def mapesp(y_true, y_pred, slot, dist):
     vs = np.zeros(66)
     dct = 0
     loss = np.zeros((144, 66))
